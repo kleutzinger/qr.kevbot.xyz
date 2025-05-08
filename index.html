@@ -5,7 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>qr.kevbot.xyz</title>
-    <!-- <link rel="stylesheet" href="style.css"> -->
+    <style>
+      body {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .qr-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 80px;
+        margin-top: 20px;
+        justify-content: center;
+      }
+      .qr-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .input-group {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+      }
+      .input-group input {
+        padding: 8px;
+        font-size: 16px;
+      }
+      .input-group button {
+        padding: 8px 16px;
+        font-size: 16px;
+      }
+      .qr-label {
+        margin-top: 16px;
+        font-weight: bold;
+        text-align: center;
+        word-break: break-word;
+        max-width: 256px;
+        font-size: 18px;
+      }
+      .mode-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 8px 16px;
+        background: #f0f0f0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      .mode-toggle:hover {
+        background: #e0e0e0;
+      }
+      .edit-mode .display-only {
+        display: none;
+      }
+      .display-mode .edit-only {
+        display: none;
+      }
+      .qr-item button {
+        margin-top: 16px;
+        padding: 8px 16px;
+        font-size: 16px;
+      }
+    </style>
   </head>
   <body>
     <script>
@@ -38,28 +109,133 @@
       typeof e)throw Error("bad rs block @ typeNumber:"+b+"/errorCorrectLevel:"+a);b=e.length/3;a=[];for(var d=0;d<b;d+=1)for(var g=e[3*d],h=e[3*d+1],t=e[3*d+2],p=0;p<g;p+=1){var q=t,f={};f.o=h;f.j=q;a.push(f)}return a}};return e}();return C}());
       //# sourceMappingURL=qr-creator.min.js.map
     </script>
-    <textarea></textarea>
-    <div id="qr-code"></div>
+    <button id="mode-toggle" class="mode-toggle">Switch to Display Mode</button>
+    <div class="input-group edit-only">
+      <input type="text" id="label-input" placeholder="Label">
+      <input type="text" id="value-input" placeholder="Enter value">
+      <button id="add-button">Add QR Code</button>
+    </div>
+    <div id="qr-codes" class="qr-container"></div>
     <script>
-    // render new qr whenever textarea is updated
-    const textarea = document.querySelector('textarea');
-    const qrCodeContainer = document.querySelector('#qr-code');
-    function renderQRCode(){
-      qrCodeContainer.innerHTML = ''; // clear previous QR code
-      QrCreator.render({
-        text: textarea.value,
-        radius: 0, // 0.0 to 0.5
-        ecLevel: 'H', // L, M, Q, H
-        fill: 'black', // foreground color
-        background: 'white', // color or null for transparent
-        size: 128 // in pixels
-      }, qrCodeContainer);
-    
-    }
-    textarea.addEventListener('input', () => {
-      renderQRCode();
-});
-    renderQRCode(); // initial render
+      const valueInput = document.querySelector('#value-input');
+      const labelInput = document.querySelector('#label-input');
+      const addButton = document.querySelector('#add-button');
+      const qrCodesContainer = document.querySelector('#qr-codes');
+      const modeToggle = document.querySelector('#mode-toggle');
+      let isEditMode = true;
+
+      // Default QR code settings
+      const defaultSettings = {
+        radius: 0,
+        ecLevel: 'H',
+        fill: 'black',
+        background: 'white',
+        size: 256
+      };
+
+      // Toggle between edit and display modes
+      function toggleMode() {
+        isEditMode = !isEditMode;
+        document.body.className = isEditMode ? 'edit-mode' : 'display-mode';
+        modeToggle.textContent = isEditMode ? 'Switch to Display Mode' : 'Switch to Edit Mode';
+      }
+
+      modeToggle.addEventListener('click', toggleMode);
+
+      // Load QR codes from hash
+      function loadFromHash() {
+        try {
+          const hash = window.location.hash.slice(1);
+          if (!hash) return;
+          const data = JSON.parse(decodeURIComponent(hash));
+          if (data.codes && Array.isArray(data.codes)) {
+            renderAllQRCodes(data.codes);
+          }
+        } catch (e) {
+          console.error('Error loading from hash:', e);
+        }
+      }
+
+      // Save QR codes to hash
+      function saveToHash(codes) {
+        const data = { codes };
+        window.location.hash = encodeURIComponent(JSON.stringify(data));
+      }
+
+      // Render a single QR code
+      function renderQRCode(settings, container) {
+        container.innerHTML = '';
+        QrCreator.render({
+          ...defaultSettings,
+          ...settings
+        }, container);
+      }
+
+      // Render all QR codes
+      function renderAllQRCodes(codes) {
+        qrCodesContainer.innerHTML = '';
+        codes.forEach((code, index) => {
+          const qrItem = document.createElement('div');
+          qrItem.className = 'qr-item';
+          
+          const qrCode = document.createElement('div');
+          qrItem.appendChild(qrCode);
+          
+          if (code.label) {
+            const label = document.createElement('div');
+            label.className = 'qr-label';
+            label.textContent = code.label;
+            qrItem.appendChild(label);
+          }
+          
+          const removeButton = document.createElement('button');
+          removeButton.textContent = 'Remove';
+          removeButton.className = 'edit-only';
+          removeButton.onclick = () => {
+            codes.splice(index, 1);
+            saveToHash(codes);
+            renderAllQRCodes(codes);
+          };
+          qrItem.appendChild(removeButton);
+          
+          qrCodesContainer.appendChild(qrItem);
+          renderQRCode(code, qrCode);
+        });
+      }
+
+      // Add new QR code
+      addButton.addEventListener('click', () => {
+        const value = valueInput.value.trim();
+        const label = labelInput.value.trim();
+        if (!value) return;
+
+        const codes = [];
+        try {
+          const hash = window.location.hash.slice(1);
+          if (hash) {
+            const data = JSON.parse(decodeURIComponent(hash));
+            if (data.codes && Array.isArray(data.codes)) {
+              codes.push(...data.codes);
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing hash:', e);
+        }
+
+        codes.push({
+          text: value,
+          label: label,
+          ...defaultSettings
+        });
+
+        saveToHash(codes);
+        renderAllQRCodes(codes);
+        valueInput.value = '';
+        labelInput.value = '';
+      });
+
+      // Load QR codes on page load
+      loadFromHash();
     </script>
   </body>
 </html>

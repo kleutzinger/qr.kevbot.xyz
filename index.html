@@ -64,8 +64,8 @@
       }
       .mode-toggle {
         position: fixed;
-        top: 20px;
-        right: 20px;
+        bottom: 20px;
+        left: 20px;
         white-space: nowrap;
       }
       .display-mode .mode-toggle {
@@ -244,7 +244,7 @@
       function toggleMode() {
         isEditMode = !isEditMode;
         document.body.className = isEditMode ? 'edit-mode' : 'display-mode';
-        modeToggle.textContent = isEditMode ? 'Switch to Display Mode' : 'Switch to Edit Mode';
+        modeToggle.textContent = isEditMode ? 'Switch to Display Mode' : 'Edit';
       }
 
       modeToggle.addEventListener('click', toggleMode);

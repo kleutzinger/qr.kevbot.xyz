@@ -84,6 +84,15 @@
         max-width: 256px;
         font-size: 18px;
       }
+      .qr-value {
+        margin-top: 8px;
+        text-align: center;
+        word-break: break-all;
+        max-width: 256px;
+        font-size: 14px;
+        color: #666;
+        font-family: monospace;
+      }
       .edit-mode .display-only {
         display: none;
       }
@@ -329,6 +338,12 @@
               label.textContent = code.label;
               qrItem.appendChild(label);
             }
+
+            const value = document.createElement('div');
+            value.className = 'qr-value edit-only';
+            const maxLength = 200;
+            value.textContent = code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text;
+            qrItem.appendChild(value);
             
             const removeButton = document.createElement('button');
             removeButton.textContent = 'Remove';

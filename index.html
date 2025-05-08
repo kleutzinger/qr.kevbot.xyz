@@ -61,9 +61,18 @@
         border-radius: 4px;
         cursor: pointer;
         font-size: 16px;
+        transition: all 0.3s ease;
       }
       .mode-toggle:hover {
         background: #e0e0e0;
+      }
+      .display-mode .mode-toggle {
+        opacity: 0.3;
+        background: rgba(240, 240, 240, 0.5);
+      }
+      .display-mode .mode-toggle:hover {
+        opacity: 1;
+        background: #f0f0f0;
       }
       .edit-mode .display-only {
         display: none;

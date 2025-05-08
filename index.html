@@ -40,10 +40,41 @@
         padding: 8px;
         font-size: 16px;
       }
-      .hash-controls button {
+      button, .source-code-button {
         padding: 8px 16px;
         font-size: 16px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        background: #24292e;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      button:hover, .source-code-button:hover {
+        background: #2f363d;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      }
+      .mode-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
         white-space: nowrap;
+      }
+      .display-mode .mode-toggle {
+        opacity: 0.3;
+        background: rgba(36, 41, 46, 0.5);
+      }
+      .display-mode .mode-toggle:hover {
+        opacity: 1;
+        background: #24292e;
       }
       .qr-label {
         margin-top: 16px;
@@ -53,29 +84,6 @@
         max-width: 256px;
         font-size: 18px;
       }
-      .mode-toggle {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 8px 16px;
-        background: #f0f0f0;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 16px;
-        transition: all 0.3s ease;
-      }
-      .mode-toggle:hover {
-        background: #e0e0e0;
-      }
-      .display-mode .mode-toggle {
-        opacity: 0.3;
-        background: rgba(240, 240, 240, 0.5);
-      }
-      .display-mode .mode-toggle:hover {
-        opacity: 1;
-        background: #f0f0f0;
-      }
       .edit-mode .display-only {
         display: none;
       }
@@ -84,8 +92,6 @@
       }
       .qr-item button {
         margin-top: 16px;
-        padding: 8px 16px;
-        font-size: 16px;
       }
       .copy-feedback {
         position: fixed;
@@ -121,8 +127,14 @@
       }
       .add-qr-form button {
         width: 100%;
-        padding: 8px 16px;
-        font-size: 16px;
+      }
+      .source-code-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+      }
+      .display-mode .source-code-button {
+        display: none;
       }
     </style>
   </head>
@@ -160,10 +172,13 @@
     <div id="copy-feedback" class="copy-feedback">Hash copied to clipboard!</div>
     <div class="hash-controls edit-only">
       <input type="text" id="hash-input" placeholder="Paste hash or URL with hash">
-      <button id="apply-hash">Apply Hash</button>
+      <button id="apply-hash">Apply Hash (will overwrite everything)</button>
       <button id="copy-hash">Copy Current Hash</button>
     </div>
     <div id="qr-codes" class="qr-container"></div>
+    <a href="https://github.com/kleutzinger/qr.kevbot.xyz" target="_blank" class="source-code-button edit-only">
+      View Source Code
+    </a>
     <script>
       let valueInput = document.querySelector('#value-input');
       let labelInput = document.querySelector('#label-input');
@@ -184,6 +199,37 @@
         background: 'white',
         size: 256
       };
+
+      // Add new QR code
+      function addQRCode() {
+        const value = valueInput.value.trim();
+        const label = labelInput.value.trim();
+        if (!value) return;
+
+        const codes = [];
+        try {
+          const hash = window.location.hash.slice(1);
+          if (hash) {
+            const data = JSON.parse(decodeURIComponent(hash));
+            if (data.codes && Array.isArray(data.codes)) {
+              codes.push(...data.codes);
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing hash:', e);
+        }
+
+        codes.push({
+          text: value,
+          label: label,
+          ...defaultSettings
+        });
+
+        saveToHash(codes);
+        renderAllQRCodes(codes);
+        valueInput.value = '';
+        labelInput.value = '';
+      }
 
       // Toggle between edit and display modes
       function toggleMode() {
@@ -231,13 +277,21 @@
       function loadFromHash() {
         try {
           const hash = window.location.hash.slice(1);
-          if (!hash) return;
+          if (!hash) {
+            // Initialize with empty codes array if no hash
+            window.location.hash = encodeURIComponent(JSON.stringify({ codes: [] }));
+            renderAllQRCodes([]);
+            return;
+          }
           const data = JSON.parse(decodeURIComponent(hash));
           if (data.codes && Array.isArray(data.codes)) {
             renderAllQRCodes(data.codes);
           }
         } catch (e) {
           console.error('Error loading from hash:', e);
+          // If there's an error parsing the hash, initialize with empty codes
+          window.location.hash = encodeURIComponent(JSON.stringify({ codes: [] }));
+          renderAllQRCodes([]);
         }
       }
 
@@ -261,41 +315,43 @@
         qrCodesContainer.innerHTML = '';
         
         // Add existing QR codes
-        codes.forEach((code, index) => {
-          const qrItem = document.createElement('div');
-          qrItem.className = 'qr-item';
-          
-          const qrCode = document.createElement('div');
-          qrItem.appendChild(qrCode);
-          
-          if (code.label) {
-            const label = document.createElement('div');
-            label.className = 'qr-label';
-            label.textContent = code.label;
-            qrItem.appendChild(label);
-          }
-          
-          const removeButton = document.createElement('button');
-          removeButton.textContent = 'Remove';
-          removeButton.className = 'edit-only';
-          removeButton.onclick = () => {
-            codes.splice(index, 1);
-            saveToHash(codes);
-            renderAllQRCodes(codes);
-          };
-          qrItem.appendChild(removeButton);
-          
-          qrCodesContainer.appendChild(qrItem);
-          renderQRCode(code, qrCode);
-        });
+        if (codes && codes.length > 0) {
+          codes.forEach((code, index) => {
+            const qrItem = document.createElement('div');
+            qrItem.className = 'qr-item';
+            
+            const qrCode = document.createElement('div');
+            qrItem.appendChild(qrCode);
+            
+            if (code.label) {
+              const label = document.createElement('div');
+              label.className = 'qr-label';
+              label.textContent = code.label;
+              qrItem.appendChild(label);
+            }
+            
+            const removeButton = document.createElement('button');
+            removeButton.textContent = 'Remove';
+            removeButton.className = 'edit-only';
+            removeButton.onclick = () => {
+              codes.splice(index, 1);
+              saveToHash(codes);
+              renderAllQRCodes(codes);
+            };
+            qrItem.appendChild(removeButton);
+            
+            qrCodesContainer.appendChild(qrItem);
+            renderQRCode(code, qrCode);
+          });
+        }
 
-        // Add the creation form
+        // Always add the creation form
         const addForm = document.createElement('div');
         addForm.className = 'add-qr-form edit-only';
         addForm.innerHTML = `
           <input type="text" id="value-input" placeholder="Enter QR code value">
           <input type="text" id="label-input" placeholder="Label (optional)">
-          <button id="add-button">Add Another QR Code</button>
+          <button id="add-button">Add QR Code</button>
         `;
         qrCodesContainer.appendChild(addForm);
 
@@ -304,46 +360,18 @@
         labelInput = document.querySelector('#label-input');
         addButton = document.querySelector('#add-button');
 
-        addButton.addEventListener('click', () => {
-          const value = valueInput.value.trim();
-          const label = labelInput.value.trim();
-          if (!value) return;
-
-          const codes = [];
-          try {
-            const hash = window.location.hash.slice(1);
-            if (hash) {
-              const data = JSON.parse(decodeURIComponent(hash));
-              if (data.codes && Array.isArray(data.codes)) {
-                codes.push(...data.codes);
-              }
-            }
-          } catch (e) {
-            console.error('Error parsing hash:', e);
-          }
-
-          codes.push({
-            text: value,
-            label: label,
-            ...defaultSettings
-          });
-
-          saveToHash(codes);
-          renderAllQRCodes(codes);
-          valueInput.value = '';
-          labelInput.value = '';
-        });
+        addButton.addEventListener('click', addQRCode);
         
         // Add enter key handlers for both inputs
         valueInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
-            addButton.click();
+            addQRCode();
           }
         });
         
         labelInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
-            addButton.click();
+            addQRCode();
           }
         });
       }

@@ -191,9 +191,7 @@
     <button id="mode-toggle" class="mode-toggle">Switch to Display Mode</button>
     <div id="copy-feedback" class="copy-feedback">Hash copied to clipboard!</div>
     <div class="hash-controls edit-only">
-      <input type="text" id="hash-input" placeholder="Paste hash or URL with hash">
-      <button id="apply-hash">Apply Hash (will overwrite everything)</button>
-      <button id="copy-hash">Copy Current Hash</button>
+      <button id="apply-hash">Import QR Codes from URL/Hash</button>
     </div>
     <div id="qr-codes" class="qr-container"></div>
     <a href="https://github.com/kleutzinger/qr.kevbot.xyz" target="_blank" class="source-code-button edit-only">
@@ -207,7 +205,6 @@
       const modeToggle = document.querySelector('#mode-toggle');
       const hashInput = document.querySelector('#hash-input');
       const applyHashButton = document.querySelector('#apply-hash');
-      const copyHashButton = document.querySelector('#copy-hash');
       const copyFeedback = document.querySelector('#copy-feedback');
       let isEditMode = true;
 
@@ -260,38 +257,21 @@
 
       modeToggle.addEventListener('click', toggleMode);
 
-      // Copy current hash to clipboard
-      copyHashButton.addEventListener('click', () => {
-        const hash = window.location.hash.slice(1);
-        navigator.clipboard.writeText(hash).then(() => {
-          copyFeedback.classList.add('visible');
-          setTimeout(() => {
-            copyFeedback.classList.remove('visible');
-          }, 2000);
-        });
-      });
-
       // Apply hash from input
       function applyHash() {
-        let hash = hashInput.value.trim();
+        const hash = prompt('Enter URL or hash:');
+        if (hash === null) return; // User cancelled
         
         // If it's a URL, extract the hash
-        if (hash.includes('#')) {
-          hash = hash.split('#')[1];
-        }
+        const hashPart = hash.includes('#') ? hash.split('#')[1] : hash;
         
-        if (hash) {
-          window.location.hash = hash;
+        if (hashPart) {
+          window.location.hash = hashPart;
           loadFromHash();
         }
       }
 
       applyHashButton.addEventListener('click', applyHash);
-      hashInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          applyHash();
-        }
-      });
 
       // Load QR codes from hash
       function loadFromHash() {
@@ -381,9 +361,14 @@
             removeButton.textContent = 'Remove';
             removeButton.className = 'edit-only';
             removeButton.onclick = () => {
-              codes.splice(index, 1);
-              saveToHash(codes);
-              renderAllQRCodes(codes);
+              const maxLength = 50;
+              const displayValue = code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text;
+              const message = `Are you sure you want to remove this QR code?\n\nLabel: ${code.label || '(none)'}\nValue: ${displayValue}`;
+              if (confirm(message)) {
+                codes.splice(index, 1);
+                saveToHash(codes);
+                renderAllQRCodes(codes);
+              }
             };
             qrItem.appendChild(removeButton);
             

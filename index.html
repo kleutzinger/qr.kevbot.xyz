@@ -278,21 +278,46 @@
         try {
           const hash = window.location.hash.slice(1);
           if (!hash) {
-            // Initialize with empty codes array if no hash
-            window.location.hash = encodeURIComponent(JSON.stringify({ codes: [] }));
-            renderAllQRCodes([]);
+            // Initialize with default QR code if no hash
+            const defaultCode = {
+              text: 'https://example.com/',
+              label: 'example.com',
+              ...defaultSettings
+            };
+            window.location.hash = encodeURIComponent(JSON.stringify({ codes: [defaultCode] }));
+            renderAllQRCodes([defaultCode]);
             return;
           }
           const data = JSON.parse(decodeURIComponent(hash));
-          if (data.codes && Array.isArray(data.codes)) {
-            renderAllQRCodes(data.codes);
+          if (!data.codes || !Array.isArray(data.codes)) {
+            throw new Error('Invalid hash format: missing or invalid codes array');
           }
+          renderAllQRCodes(data.codes);
         } catch (e) {
           console.error('Error loading from hash:', e);
-          // If there's an error parsing the hash, initialize with empty codes
-          window.location.hash = encodeURIComponent(JSON.stringify({ codes: [] }));
-          renderAllQRCodes([]);
+          // Clear the invalid hash
+          window.location.hash = '';
+          // Show error with button to load example
+          qrCodesContainer.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+              <p style="color: #dc3545; margin-bottom: 20px;">Error loading QR codes: ${e.message}</p>
+              <button onclick="loadExample()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
+                Load Example QR Code
+              </button>
+            </div>
+          `;
         }
+      }
+
+      // Function to load example QR code
+      function loadExample() {
+        const defaultCode = {
+          text: 'https://example.com/',
+          label: 'example.com',
+          ...defaultSettings
+        };
+        window.location.hash = encodeURIComponent(JSON.stringify({ codes: [defaultCode] }));
+        renderAllQRCodes([defaultCode]);
       }
 
       // Save QR codes to hash

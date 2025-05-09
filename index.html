@@ -28,6 +28,17 @@
         background: white;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }
+      .qr-label, .qr-value {
+        padding: 8px;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+      }
+      .edit-mode .qr-label:hover, .edit-mode .qr-value:hover {
+        background-color: #f0f0f0;
+      }
+      .edit-mode .qr-label, .edit-mode .qr-value {
+        cursor: pointer;
+      }
       .hash-controls {
         display: flex;
         gap: 10px;
@@ -336,6 +347,17 @@
               const label = document.createElement('div');
               label.className = 'qr-label';
               label.textContent = code.label;
+              label.style.cursor = 'pointer';
+              label.onclick = () => {
+                if (isEditMode) {
+                  const newLabel = prompt('Enter new label:', code.label);
+                  if (newLabel !== null) {
+                    code.label = newLabel.trim();
+                    label.textContent = code.label;
+                    saveToHash(codes);
+                  }
+                }
+              };
               qrItem.appendChild(label);
             }
 
@@ -343,6 +365,16 @@
             value.className = 'qr-value edit-only';
             const maxLength = 200;
             value.textContent = code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text;
+            value.style.cursor = 'pointer';
+            value.onclick = () => {
+              const newValue = prompt('Enter new value:', code.text);
+              if (newValue !== null) {
+                code.text = newValue.trim();
+                value.textContent = code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text;
+                saveToHash(codes);
+                renderQRCode(code, qrCode);
+              }
+            };
             qrItem.appendChild(value);
             
             const removeButton = document.createElement('button');

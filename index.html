@@ -217,6 +217,22 @@
         size: 256
       };
 
+      // Function to clean settings by removing default values
+      function cleanSettings(settings) {
+        const cleaned = {};
+        for (const [key, value] of Object.entries(settings)) {
+          if (value !== defaultSettings[key]) {
+            cleaned[key] = value;
+          }
+        }
+        return cleaned;
+      }
+
+      // Function to merge settings with defaults
+      function mergeWithDefaults(settings) {
+        return { ...defaultSettings, ...settings };
+      }
+
       // Add new QR code
       function addQRCode() {
         const value = valueInput.value.trim();
@@ -232,7 +248,10 @@
           if (hash) {
             const data = JSON.parse(decodeURIComponent(hash));
             if (data.codes && Array.isArray(data.codes)) {
-              codes.push(...data.codes);
+              codes.push(...data.codes.map(code => ({
+                ...code,
+                ...mergeWithDefaults(code)
+              })));
             }
           }
         } catch (e) {
@@ -332,18 +351,21 @@
             // Initialize with default QR code if no hash
             const defaultCode = {
               text: 'https://example.com/',
-              label: 'example.com',
-              ...defaultSettings
+              label: 'example.com'
             };
             window.location.hash = encodeURIComponent(JSON.stringify({ codes: [defaultCode] }));
-            renderAllQRCodes([defaultCode]);
+            renderAllQRCodes([mergeWithDefaults(defaultCode)]);
             return;
           }
           const data = JSON.parse(decodeURIComponent(hash));
           if (!data.codes || !Array.isArray(data.codes)) {
             throw new Error('Invalid hash format: missing or invalid codes array');
           }
-          renderAllQRCodes(data.codes);
+          const codes = data.codes.map(code => ({
+            ...code,
+            ...mergeWithDefaults(code)
+          }));
+          renderAllQRCodes(codes);
         } catch (e) {
           console.error('Error loading from hash:', e);
           // Clear the invalid hash
@@ -364,16 +386,20 @@
       function loadExample() {
         const defaultCode = {
           text: 'https://example.com/',
-          label: 'example.com',
-          ...defaultSettings
+          label: 'example.com'
         };
         window.location.hash = encodeURIComponent(JSON.stringify({ codes: [defaultCode] }));
-        renderAllQRCodes([defaultCode]);
+        renderAllQRCodes([mergeWithDefaults(defaultCode)]);
       }
 
       // Save QR codes to hash
       function saveToHash(codes) {
-        const data = { codes };
+        const cleanedCodes = codes.map(code => ({
+          text: code.text,
+          ...(code.label ? { label: code.label } : {}),
+          ...cleanSettings(code)
+        }));
+        const data = { codes: cleanedCodes };
         window.location.hash = encodeURIComponent(JSON.stringify(data));
       }
 

@@ -255,16 +255,53 @@
         document.body.className = isEditMode ? 'edit-mode' : 'display-mode';
         modeToggle.textContent = isEditMode ? 'Switch to Display Mode' : 'Edit';
         
-        // Update all label texts
-        document.querySelectorAll('.qr-label').forEach(label => {
-          const text = label.textContent.replace('Label: ', '');
-          label.textContent = isEditMode ? `Label: ${text}` : text;
-          if (isEditMode) {
+        // Update all QR items
+        document.querySelectorAll('.qr-item').forEach((qrItem, index) => {
+          const codes = JSON.parse(decodeURIComponent(window.location.hash.slice(1))).codes;
+          const code = codes[index];
+          
+          // Remove existing label if any
+          const existingLabel = qrItem.querySelector('.qr-label');
+          if (existingLabel) {
+            existingLabel.remove();
+          }
+          
+          // Add label based on mode
+          if (code.label && code.label.trim()) {
+            const label = document.createElement('div');
+            label.className = 'qr-label';
+            if (isEditMode) {
+              label.textContent = `Label: ${code.label}`;
+              label.style.cursor = 'pointer';
+              label.onclick = () => {
+                const newLabel = prompt('Enter new label:', code.label);
+                if (newLabel !== null) {
+                  code.label = newLabel.trim();
+                  label.textContent = `Label: ${code.label}`;
+                  saveToHash(codes);
+                }
+              };
+            } else {
+              label.textContent = code.label;
+              label.style.cursor = 'default';
+              label.onclick = null;
+              label.style.pointerEvents = 'none';
+            }
+            qrItem.insertBefore(label, qrItem.querySelector('.qr-value'));
+          } else if (isEditMode) {
+            const label = document.createElement('div');
+            label.className = 'qr-label';
+            label.textContent = '<No Label>';
             label.style.cursor = 'pointer';
-            label.style.pointerEvents = 'auto';
-          } else {
-            label.style.cursor = 'default';
-            label.style.pointerEvents = 'none';
+            label.onclick = () => {
+              const newLabel = prompt('Enter new label:');
+              if (newLabel !== null) {
+                code.label = newLabel.trim();
+                label.textContent = `Label: ${code.label}`;
+                saveToHash(codes);
+              }
+            };
+            qrItem.insertBefore(label, qrItem.querySelector('.qr-value'));
           }
         });
       }
@@ -295,6 +332,7 @@
             // Initialize with default QR code if no hash
             const defaultCode = {
               text: 'https://example.com/',
+              label: 'example.com',
               ...defaultSettings
             };
             window.location.hash = encodeURIComponent(JSON.stringify({ codes: [defaultCode] }));
@@ -326,6 +364,7 @@
       function loadExample() {
         const defaultCode = {
           text: 'https://example.com/',
+          label: 'example.com',
           ...defaultSettings
         };
         window.location.hash = encodeURIComponent(JSON.stringify({ codes: [defaultCode] }));
@@ -347,6 +386,11 @@
         }, container);
       }
 
+      // Function to cap string length and add ellipsis
+      function capLength(str, maxLength) {
+        return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
+      }
+
       // Render all QR codes
       function renderAllQRCodes(codes) {
         qrCodesContainer.innerHTML = '';
@@ -360,7 +404,7 @@
             const qrCode = document.createElement('div');
             qrItem.appendChild(qrCode);
             
-            if (code.label) {
+            if (code.label && code.label.trim()) {
               const label = document.createElement('div');
               label.className = 'qr-label';
               if (isEditMode) {
@@ -384,7 +428,7 @@
             } else if (isEditMode) {
               const label = document.createElement('div');
               label.className = 'qr-label';
-              label.textContent = 'Label: (none)';
+              label.textContent = '<No Label>';
               label.style.cursor = 'pointer';
               label.onclick = () => {
                 const newLabel = prompt('Enter new label:');
@@ -400,13 +444,13 @@
             const value = document.createElement('div');
             value.className = 'qr-value edit-only';
             const maxLength = 200;
-            value.innerHTML = isEditMode ? `QR Value:<br>${code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text}` : (code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text);
+            value.innerHTML = isEditMode ? `QR Value:<br>${capLength(code.text, maxLength)}` : capLength(code.text, maxLength);
             value.style.cursor = 'pointer';
             value.onclick = () => {
               const newValue = prompt('Enter new QR Value:', code.text);
               if (newValue !== null) {
                 code.text = newValue.trim();
-                value.innerHTML = isEditMode ? `QR Value:<br>${code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text}` : (code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text);
+                value.innerHTML = isEditMode ? `QR Value:<br>${capLength(code.text, maxLength)}` : capLength(code.text, maxLength);
                 saveToHash(codes);
                 renderQRCode(code, qrCode);
               }

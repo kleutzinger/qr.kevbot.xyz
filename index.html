@@ -221,7 +221,11 @@
       function addQRCode() {
         const value = valueInput.value.trim();
         const label = labelInput.value.trim();
-        if (!value) return;
+        if (!value) {
+          alert('Please enter a value for the QR code');
+          valueInput.focus();
+          return;
+        }
 
         const codes = [];
         try {
@@ -253,6 +257,19 @@
         isEditMode = !isEditMode;
         document.body.className = isEditMode ? 'edit-mode' : 'display-mode';
         modeToggle.textContent = isEditMode ? 'Switch to Display Mode' : 'Edit';
+        
+        // Update all label texts
+        document.querySelectorAll('.qr-label').forEach(label => {
+          const text = label.textContent.replace('Label: ', '');
+          label.textContent = isEditMode ? `Label: ${text}` : text;
+          if (isEditMode) {
+            label.style.cursor = 'pointer';
+            label.style.pointerEvents = 'auto';
+          } else {
+            label.style.cursor = 'default';
+            label.style.pointerEvents = 'none';
+          }
+        });
       }
 
       modeToggle.addEventListener('click', toggleMode);
@@ -351,16 +368,35 @@
             if (code.label) {
               const label = document.createElement('div');
               label.className = 'qr-label';
-              label.textContent = code.label;
-              label.style.cursor = 'pointer';
-              label.onclick = () => {
-                if (isEditMode) {
+              if (isEditMode) {
+                label.textContent = `Label: ${code.label}`;
+                label.style.cursor = 'pointer';
+                label.onclick = () => {
                   const newLabel = prompt('Enter new label:', code.label);
                   if (newLabel !== null) {
                     code.label = newLabel.trim();
-                    label.textContent = code.label;
+                    label.textContent = `Label: ${code.label}`;
                     saveToHash(codes);
                   }
+                };
+              } else {
+                label.textContent = code.label;
+                label.style.cursor = 'default';
+                label.onclick = null;
+                label.style.pointerEvents = 'none';
+              }
+              qrItem.appendChild(label);
+            } else if (isEditMode) {
+              const label = document.createElement('div');
+              label.className = 'qr-label';
+              label.textContent = 'Label: (none)';
+              label.style.cursor = 'pointer';
+              label.onclick = () => {
+                const newLabel = prompt('Enter new label:');
+                if (newLabel !== null) {
+                  code.label = newLabel.trim();
+                  label.textContent = `Label: ${code.label}`;
+                  saveToHash(codes);
                 }
               };
               qrItem.appendChild(label);
@@ -369,13 +405,13 @@
             const value = document.createElement('div');
             value.className = 'qr-value edit-only';
             const maxLength = 200;
-            value.textContent = code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text;
+            value.innerHTML = isEditMode ? `QR Value:<br>${code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text}` : (code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text);
             value.style.cursor = 'pointer';
             value.onclick = () => {
-              const newValue = prompt('Enter new value:', code.text);
+              const newValue = prompt('Enter new QR Value:', code.text);
               if (newValue !== null) {
                 code.text = newValue.trim();
-                value.textContent = code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text;
+                value.innerHTML = isEditMode ? `QR Value:<br>${code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text}` : (code.text.length > maxLength ? code.text.substring(0, maxLength) + '...' : code.text);
                 saveToHash(codes);
                 renderQRCode(code, qrCode);
               }

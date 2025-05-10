@@ -220,7 +220,6 @@
       // Add new QR code
       function addQRCode() {
         const value = valueInput.value.trim();
-        const label = labelInput.value.trim();
         if (!value) {
           alert('Please enter a value for the QR code');
           valueInput.focus();
@@ -242,14 +241,12 @@
 
         codes.push({
           text: value,
-          label: label,
           ...defaultSettings
         });
 
         saveToHash(codes);
         renderAllQRCodes(codes);
         valueInput.value = '';
-        labelInput.value = '';
       }
 
       // Toggle between edit and display modes
@@ -298,7 +295,6 @@
             // Initialize with default QR code if no hash
             const defaultCode = {
               text: 'https://example.com/',
-              label: 'example.com',
               ...defaultSettings
             };
             window.location.hash = encodeURIComponent(JSON.stringify({ codes: [defaultCode] }));
@@ -330,7 +326,6 @@
       function loadExample() {
         const defaultCode = {
           text: 'https://example.com/',
-          label: 'example.com',
           ...defaultSettings
         };
         window.location.hash = encodeURIComponent(JSON.stringify({ codes: [defaultCode] }));
@@ -443,26 +438,18 @@
         addForm.className = 'add-qr-form edit-only';
         addForm.innerHTML = `
           <input type="text" id="value-input" placeholder="Enter QR code value">
-          <input type="text" id="label-input" placeholder="Label (optional)">
           <button id="add-button">Add QR Code</button>
         `;
         qrCodesContainer.appendChild(addForm);
 
         // Reattach event listeners
         valueInput = document.querySelector('#value-input');
-        labelInput = document.querySelector('#label-input');
         addButton = document.querySelector('#add-button');
 
         addButton.addEventListener('click', addQRCode);
         
-        // Add enter key handlers for both inputs
+        // Add enter key handler for input
         valueInput.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') {
-            addQRCode();
-          }
-        });
-        
-        labelInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
             addQRCode();
           }
